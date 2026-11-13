@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Learning Cloth: a CS 284A project proposal comparing physics simulation, learned dynamics, and a hybrid model for robot cloth folding.">
+    <title>Learning Cloth | CS 284A Project Proposal</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <header>
+        <p class="proposal-note">Initial proposal, subject to revision following feedback from course staff.</p>
+        <div class="logos">
+          <img class="berkeley-logo" src="assets/uc-berkeley.svg" alt="UC Berkeley" width="225" height="42">
+          <img class="course-logo" src="assets/cs184-284a.png" alt="CS 184/284A course logo: a bunny in a teapot" width="1124" height="925">
+        </div>
+        <h1>Learning Cloth</h1>
+        <p class="subtitle">How much learning should go into cloth simulation?</p>
+        <p class="team">Brian Chu, Jacob Lopez, Jimmy Wang, Charles Xu</p>
+        <p class="webpage-link">Project webpage: <a href="https://jacobrlopez.github.io/cs284a-project-proposal/">jacobrlopez.github.io/cs284a-project-proposal/</a></p>
+      </header>
+
+      <main id="main">
+        <section id="summary" aria-labelledby="summary-title">
+          <h2 id="summary-title">Summary</h2>
+          <p>We will compare physics simulation, learned dynamics, and a combination of the two for robot cloth folding. We will measure how well each method predicts cloth motion and how long it takes to run. We want to find out whether adding a learned correction to a physics simulator improves accuracy enough to justify its cost.</p>
+        </section>
+
+        <section id="problem" aria-labelledby="problem-title">
+          <h2 id="problem-title">Problem Description</h2>
+          <p>Robots can learn and practice tasks in simulation before attempting them on real hardware. For cloth folding, this depends on a simulator that captures how fabric stretches, bends, and makes contact with itself and the table. Matching a real cloth is difficult because its starting shape, material properties, and contact with the gripper may be uncertain.</p>
+          <p>Using smaller time steps can improve a simulation but also makes it slower. A learned model might approximate some of that detail at a lower cost, though its errors can accumulate over time. We will test this on a single cloth folding task by comparing a physics solver, a learned predictor, and a physics solver with a learned correction.</p>
+        </section>
+
+        <section id="goals" aria-labelledby="goals-title">
+          <h2 id="goals-title">Goals and Deliverables</h2>
+          <p>We will test whether a small learned correction helps a faster cloth simulation match a reference simulation that uses smaller time steps. The three models will use the same mesh and grasp motions. The work draws on the course topics of mesh geometry, physical simulation, numerical integration, collisions, and shading.</p>
+
+          <h3>1. What we plan to deliver</h3>
+          <p><strong>Cloth representation and physics baseline.</strong> We will model a square cloth as a triangulated grid with structural, shear, and bending springs. The scene will include gravity, damping, a tabletop, and prescribed grasp points. We will use Verlet integration with adjustable substeps, stretch constraints, and spatial hashing to approximate contact between parts of the cloth. We will start with a 25 × 25 vertex grid and try a 50 × 50 grid if the first version is stable. These choices build on <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw4/part1/">masses and springs</a>, <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw4/part2/">numerical integration</a>, and <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw4/part4/">self collisions</a> from the course.</p>
+          <p><strong>Three comparable models.</strong> We will implement a physics solver, a learned dynamics predictor, and a hybrid solver. The learned model will use a small graph network over cloth vertices and edges to predict velocity changes from local geometry, velocity, material parameters, and grasp motion. The hybrid will use the same type of network to predict a residual velocity correction after a physics step. All three models will use the same mesh, grasp trajectories, and final corrections for stretch and contact. The learned predictor will replace the dynamics update while retaining these geometric constraints. We will evaluate complete motion sequences, with each prediction used as input to the next step.</p>
+          <p><strong>Controlled scenes and reference data.</strong> We will test cloth hanging from two corners, a tabletop fold made by lifting and moving two corners, and variations of that fold with grasp speeds and offsets excluded from training. Each folding sequence will last approximately three seconds, including grasp release and a settling interval. We will generate reference trajectories with the same physical model and smaller time steps. Halving the reference time step should produce little change in the result. Agreement with this numerical reference will measure simulation error. Testing accuracy on real cloth will require separate data. Our initial dataset target is 100 trajectories split into 60 training, 20 validation, and 20 test trajectories, with entire trajectories kept separate and test conditions fixed before model tuning.</p>
+          <p><strong>Graphics demo and images.</strong> Our demo recording will show the reference simulation and all three models at synchronized times. Include shaded views with the same camera and lighting, wireframe views showing deformation, and heat maps of vertex error with a shared scale. Capture the initial state, first layer contact, and settled fold. A separate replay viewer will let us pause, restart, choose a model, and switch between shaded, wireframe, and error views. Shading will make fold geometry visible, following the course’s <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw4/part5/">shader topics</a>.</p>
+
+          <p><strong>Quality and performance measurements.</strong> We will measure the following on trajectories excluded from training:</p>
+          <ul>
+            <li><strong>Motion error:</strong> root mean square distance between corresponding predicted and reference vertices at each frame, normalized by cloth side length. Plot error over time and report the mean and error at the final frame.</li>
+            <li><strong>Fold accuracy:</strong> mean distance between corresponding points on the folded edge and its target edge after grasp release and settling, normalized by cloth side length. This avoids evaluating only the positions imposed by the grasp controller.</li>
+            <li><strong>Physical plausibility:</strong> maximum relative stretch along structural edges, maximum tabletop penetration depth, and fraction of vertex pairs closer than the minimum separation set by cloth thickness, excluding mesh neighbors. The last measure estimates contact errors but may miss intersections between triangles.</li>
+            <li><strong>Cost and stability:</strong> elapsed seconds per simulated second, excluding rendering and file output, on the same hardware. We will state which computations run on the CPU or GPU. Timing will include all solver substeps, network inference, and contact handling. We will report training time separately and repeat timing runs to measure variation. We will also report how often motion sequences produce invalid numerical values or excessive stretch. We will set the stretch failure threshold using validation data before testing.</li>
+          </ul>
+          <p><strong>Experiments and success criteria.</strong> We will compare three stable substep settings and plot error against runtime. Running the hybrid with its learned correction disabled will show what the correction contributes. We will also vary bending stiffness and grasp speed separately to see where the models stop working well. Our initial target is at least 10% lower mean motion error than the physics solver, with no more than 10% additional runtime and no increase in contact violations. A successful project will include a reproducible comparison of the three models, the test with the correction disabled, visual results, and an explanation of what worked and what failed. If the learned models are unstable, we will report their errors for individual prediction steps and show where the full sequences fail.</p>
+          <p><strong>Why this scope is feasible.</strong> Using one cloth topology, prescribed grasps, and generated training data gives us a manageable starting point. Sharing the contact code also reduces implementation work. The project adds a learned correction and evaluates its effect on motion error, runtime, and physical behavior. We will discuss MPM and FEM in the literature review, with an additional solver as a stretch goal.</p>
+          <p><strong>Questions we will answer.</strong> Does a residual correction reduce accumulated motion error at a fixed compute budget? Does it preserve stretch and contact behavior? How does its benefit change with the number of integration substeps, stiffness, and grasp speed, and where does a learned predictor become unstable?</p>
+
+          <h3>2. What we hope to deliver</h3>
+          <ul>
+            <li><strong>Broader simulation tests.</strong> Evaluate additional cloth resolutions and material parameters, or adapt an existing FEM or MPM implementation for one matched scene. Clearly separate errors caused by time stepping from differences in the underlying material model.</li>
+            <li><strong>Validation on real data.</strong> Use the cloth manipulation benchmark below to compare observed and simulated surfaces after scene alignment. Report symmetric surface distance when vertex correspondences are unavailable, and document differences in cloth properties and grasp trajectories.</li>
+            <li><strong>Robot transfer.</strong> If lab access and time permit, align a simulated scene to a real robot setup, train a folding policy using imitation learning or reinforcement learning, and compare final edge alignment error and fold success over repeated trials. Fix the success tolerance before testing and report the number of trials. This is the final stretch goal after the simulation study is complete.</li>
+          </ul>
+        </section>
+
+        <section id="schedule" aria-labelledby="schedule-title">
+          <h2 id="schedule-title">Schedule</h2>
+          <p>Four weeks from proposal to final presentation.</p>
+          <ol class="schedule">
+            <li>
+              <div class="week">Week 1</div>
+              <div><h3>Implement baselines</h3>
+                <p>Implement the 25 × 25 cloth model with masses and springs, Verlet stepping, prescribed grasps, tabletop contact, and approximate contact between parts of the cloth. Validate the hanging and half fold scenes. Confirm hardware, check whether the reference converges as the time step decreases, and freeze the trajectory split and metric definitions.</p>
+                <p class="milestone"><strong>Milestone:</strong> A stable physics baseline, two scene recordings, and an agreed plan for generating reference data.</p>
+              </div>
+            </li>
+            <li>
+              <div class="week">Week 2</div>
+              <div><h3>Study baseline tradeoffs</h3>
+                <p>Generate the planned trajectory dataset and run the physics substep sweep. Train the learned dynamics baseline and record errors over full motion sequences. Build the synchronized replay and error heat maps. Prepare the milestone paper, a video lasting one minute, and slides.</p>
+                <p class="milestone"><strong>Milestone:</strong> Physics and learned model comparison, first error/runtime plots, and milestone materials.</p>
+              </div>
+            </li>
+            <li>
+              <div class="week">Week 3</div>
+              <div><h3>Develop the hybrid method</h3>
+                <p>Train the residual velocity model. Run the hybrid with and without its correction. Test grasp speeds and offsets excluded from training, vary stiffness, and measure contact and stretch violations. Attempt the 50 × 50 scaling test only after the core comparison works.</p>
+                <p class="milestone"><strong>Milestone:</strong> Results for all three models, a test with the correction disabled, and documented stability or generalization failures.</p>
+              </div>
+            </li>
+            <li>
+              <div class="week">Week 4</div>
+              <div><h3>Finish results and presentation</h3>
+                <p>Freeze the test evaluation, repeat timing measurements, and finish synchronized clips, heat maps, and error/runtime plots. Write the CS284A paper and prepare the final video and presentation. Attempt validation on real data or robot transfer only after the core deliverables are complete.</p>
+                <p class="milestone"><strong>Milestone:</strong> Reproducible results and configurations, replay demo, final paper, video, and presentation.</p>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <section id="resources" aria-labelledby="resources-title">
+          <h2 id="resources-title">Resources</h2>
+          <h3>Papers and data</h3>
+          <ol class="references">
+            <li>David Baraff and Andrew Witkin. <a href="https://doi.org/10.1145/280814.280821">Large Steps in Cloth Simulation</a>. SIGGRAPH, 1998. <span>Foundational cloth simulation methods.</span></li>
+            <li>Alexey Stomakhin et al. <a href="https://doi.org/10.1145/2461912.2461948">A Material Point Method for Snow Simulation</a>. ACM Transactions on Graphics, 2013. <span>Background on MPM. Applying this method to cloth would require changes to the material model.</span></li>
+            <li>Tobias Pfaff et al. <a href="https://arxiv.org/abs/2010.03409">Learning Mesh-Based Simulation with Graph Networks</a>. ICLR, 2021. <span>Reference for learned dynamics on cloth meshes. Our experiment will test a learned correction to a physics solver.</span></li>
+            <li>Jan Matas, Stephen James, and Andrew J. Davison. <a href="https://proceedings.mlr.press/v87/matas18a.html">Sim-to-Real Reinforcement Learning for Deformable Object Manipulation</a>. CoRL, 2018. <span>Robot cloth manipulation and policy transfer.</span></li>
+            <li>David Blanco-Mulero et al. <a href="https://arxiv.org/abs/2310.09543">Benchmarking the Sim-to-Real Gap in Cloth Manipulation</a>. <span>The paper and its supplementary dataset will inform evaluation of the simulation gap, runtime, and stability.</span></li>
+          </ol>
+          <h3>Course references</h3>
+          <p>The <a href="https://cs184.eecs.berkeley.edu/fa26/">CS184/284A course</a> provides the mesh and simulation background. <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw4/">Homework 4</a> provides background for the cloth model. Our project will add the learned correction, model comparison, and evaluation code. We will follow the <a href="https://cs184.eecs.berkeley.edu/fa26/project/">CS284A project requirements</a> for milestone and final submissions.</p>
+          <h3>Computing platform, hardware, software, and starting code</h3>
+          <p><em>To be completed by the team.</em></p>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
