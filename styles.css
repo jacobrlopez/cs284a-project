@@ -26,7 +26,8 @@ ul, ol { padding-left: 25px; margin: 12px 0 18px; }
 li { margin-bottom: 10px; }
 a { color: #174a8b; text-underline-offset: .15em; }
 a:focus-visible { outline: 2px solid #174a8b; outline-offset: 3px; }
-.schedule { list-style: none; padding: 0; }
+.materials { list-style: none; padding: 0; }
+.materials li { margin-bottom: 4px; }
 .schedule > li { margin-bottom: 24px; }
 .week { font-weight: bold; }
 .schedule h3 { margin: 2px 0 8px; }
@@ -48,4 +49,28 @@ a:focus-visible { outline: 2px solid #174a8b; outline-offset: 3px; }
   h2, h3, .week { break-after: avoid; }
   .schedule > li, .references li { break-inside: avoid; }
   a { color: inherit; }
+}
+
+table { width: 100%; border-collapse: collapse; margin: 18px 0 22px; font-size: .88rem; }
+caption { text-align: left; margin-bottom: 8px; color: #555; }
+th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid #ddd; vertical-align: top; }
+thead th { border-bottom: 1px solid #888; }
+tbody th { font-weight: normal; }
+@media (max-width: 540px) {
+  table { font-size: .875rem; }
+  th, td { padding: 8px 4px; }
+}
+@media print {
+  table { break-inside: avoid; }
+  thead { display: table-header-group; }
+}
+
+figure { margin: 24px 0; }
+figure video, .print-video { width: 100%; height: auto; display: block; }
+figcaption { margin-top: 10px; font-size: .88rem; color: #555; }
+.print-video { display: none; }
+@media print {
+  figure { break-inside: avoid; }
+  figure video { display: none; }
+  .print-video { display: block; }
 }

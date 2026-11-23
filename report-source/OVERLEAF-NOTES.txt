@@ -1,0 +1,15 @@
+Open main.tex as the main document in Overleaf. Use XeLaTeX and BibTeX.
+The project includes the supplied ACM class and bibliography style, references.bib, and three figures extracted from the team's simulation recordings.
+
+The revised report retains the original methods and measured results. It adds the abstract, discussion, reproducibility details, future work, conclusion, and linked project materials. ACM sample conference metadata, placeholder sections, sample references, and joke text have been removed.
+
+Before submission:
+- Complete Author Contributions. Individual roles were not supplied and have not been inferred.
+- Update results and the report date if experiments change.
+- The narrated milestone video is linked in Project Materials. Publish assets/videos/cs284-milestone-video.mp4 with the website before submitting so that this link resolves. The final video is a later deliverable.
+- Confirm the public webpage and presentation links work for course staff.
+
+CS284A requires a journal-style paper in the ACM SIGGRAPH template, aiming for 4–6 pages. Submit the paper PDF with clickable links to the webpage, slides, and video.
+https://cs184.eecs.berkeley.edu/fa26/project/#52b--final-paper-cs284a
+
+Template restoration: main.tex now uses the original documentclass[sigconf]{acmart}, standard ACM front matter, CCS concepts, full-width teaser, numbered sections, and ACM-Reference-Format bibliography. The Methods/held-out quality and Results structure follows the supplied source. Course metadata replaces the fictitious conference, DOI, ISBN, and copyright claim. Sample tutorial sections and empty appendices are not report content.

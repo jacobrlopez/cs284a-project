@@ -1,0 +1,46 @@
+WEBVTT
+
+NOTE Automatically generated captions. Technical spellings normalized.
+
+00:00:00.000 --> 00:00:05.200
+stages of our project, we wanted to investigate the trade-offs between learning-based and traditional
+
+00:00:05.200 --> 00:00:11.760
+cloth simulation, especially for robotic manipulation. We're specifically interested in things like
+
+00:00:11.760 --> 00:00:16.880
+real-to-sim transfer from real data, and also the speed at which the cloth can be simulated.
+
+00:00:18.480 --> 00:00:24.480
+On the left, we have a method that we implemented called extended position-based dynamics.
+
+00:00:25.280 --> 00:00:32.480
+In the second column, we have a simple mass spring model, and here you can see some visual results.
+
+00:00:33.680 --> 00:00:40.000
+On the right is a method called physics-guided residual dynamics, which is a learning-based method,
+
+00:00:40.000 --> 00:00:44.000
+and it is distilled from the extended position-based dynamics teacher.
+
+00:00:44.000 --> 00:00:52.880
+We also investigated some more complex simulation, so here on the right is a
+
+00:00:52.880 --> 00:01:01.840
+MuJoCo-based simulator, and on the left and in the middle column are open-loop rollouts from
+
+00:01:01.840 --> 00:01:07.520
+a method called 3D World Simulator, and here you can see that there are some artifacts,
+
+00:01:07.520 --> 00:01:13.040
+but it is doing a pretty good job of simulating, and for the next steps, we want to investigate
+
+00:01:13.040 --> 00:01:19.680
+speed trade-offs between the neural-based methods and the traditional simulation-based methods,
+
+00:01:19.680 --> 00:01:23.920
+and also our traditional simulation-based methods that we implemented don't have collisions or
+
+00:01:23.920 --> 00:01:27.400
+robot arms, so we will continue to investigate that.
+

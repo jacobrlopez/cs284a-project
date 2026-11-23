@@ -3,118 +3,170 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Learning Cloth: a CS 284A project proposal comparing physics simulation, learned dynamics, and a hybrid model for robot cloth folding.">
-    <title>Learning Cloth | CS 284A Project Proposal</title>
+    <meta name="description" content="Learning Cloth: CS 284A milestone results on cloth simulation accuracy, GPU performance, and a learned robot world model.">
+    <title>Learning Cloth | CS 284A Milestone</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
     <div class="page">
       <header>
-        <p class="proposal-note">Initial proposal, subject to revision following feedback from course staff.</p>
+        <p class="proposal-note">Project progress as of November 22, 2026. Experiments and report are still in progress.</p>
         <div class="logos">
           <img class="berkeley-logo" src="assets/uc-berkeley.svg" alt="UC Berkeley" width="225" height="42">
           <img class="course-logo" src="assets/cs184-284a.png" alt="CS 184/284A course logo: a bunny in a teapot" width="1124" height="925">
         </div>
         <h1>Learning Cloth</h1>
-        <p class="subtitle">How much learning should go into cloth simulation?</p>
+        <p class="subtitle">Cloth Simulation Efficiency Evaluation</p>
         <p class="team">Brian Chu, Jacob Lopez, Jimmy Wang, Charles Xu</p>
-        <p class="webpage-link">Project webpage: <a href="https://jacobrlopez.github.io/cs284a-project-proposal/">jacobrlopez.github.io/cs284a-project-proposal/</a></p>
+        <p class="webpage-link">Project webpage: <a href="https://jacobrlopez.github.io/cs284a-project/">jacobrlopez.github.io/cs284a-project/</a></p>
+        <p class="webpage-link">GitHub repository: <a href="https://github.com/charlesxu0124/284A-final-project">github.com/charlesxu0124/284A-final-project</a></p>
       </header>
 
       <main id="main">
-        <section id="summary" aria-labelledby="summary-title">
+        <section aria-labelledby="materials-title">
+          <h2 id="materials-title">Project Materials</h2>
+          <ul class="materials">
+            <li><a href="reports/learning-cloth-report.pdf">Milestone report (PDF)</a></li>
+            <li><a href="assets/videos/cs284-milestone-video.mp4">Narrated milestone video</a></li>
+            <li><a href="https://docs.google.com/presentation/d/10qQ5zAVu4HsRSvfzTfzSnumnGHDP_jmQl_tjDnVh7NU/edit">Presentation slides</a></li>
+            <li><a href="https://github.com/charlesxu0124/284A-final-project">Code and experiment artifacts</a></li>
+            <li><a href="https://drive.google.com/file/d/1KOEwjS67DSdJb9yQWuCjANsEz6WcbaMj/view?usp=drive_link">Earlier voice recording</a></li>
+          </ul>
+          <figure>
+            <video controls playsinline preload="metadata" poster="assets/videos/cs284-milestone-video.jpg" width="1600" height="886" aria-label="Narrated milestone progress report">
+              <source src="assets/videos/cs284-milestone-video.mp4" type="video/mp4">
+              <track kind="captions" src="assets/videos/cs284-milestone-video.vtt" srclang="en" label="English (automatic)">
+              <a href="assets/videos/cs284-milestone-video.mp4">Watch the milestone video</a>
+            </video>
+            <img class="print-video" src="assets/videos/cs284-milestone-video.jpg" alt="Milestone presentation showing the cloth solver comparison" width="1600" height="886">
+            <figcaption>Our narrated progress update covers the cloth solvers, robot world model, and next experiments. <a href="assets/videos/cs284-milestone-video.mp4">Open video</a> · <a href="assets/videos/milestone-video-transcript.txt">Transcript (automatic)</a></figcaption>
+          </figure>
+        </section>
+        <section aria-labelledby="summary-title">
           <h2 id="summary-title">Summary</h2>
-          <p>We will compare physics simulation, learned dynamics, and a combination of the two for robot cloth folding. We will measure how well each method predicts cloth motion and how long it takes to run. We want to find out whether adding a learned correction to a physics simulator improves accuracy enough to justify its cost.</p>
+          <p>We are studying the accuracy and cost of cloth simulation for robotic folding. We have implemented a mass and spring solver, Extended Position Based Dynamics (XPBD), and a tabletop adaptation of Physics Guided Residual Dynamics (PGRD). In a small synthetic test, PGRD reduces average motion error but increases final frame error, while fused GPU physics is substantially faster than the hybrid.</p>
+          <p>In a separate experiment, we implemented a MuJoCo scene with robot arms and used a learned 3D world model to predict its visual dynamics. The demonstration captures the broad scene configuration, with visible artifacts. Our next step is to test whether learning can improve speed when methods are compared at similar motion error and contact quality. We plan to vary solver budgets, collect more measurements, add Newton VBD, and train a MeshGraphNets style model on the same trajectories.</p>
         </section>
-
-        <section id="problem" aria-labelledby="problem-title">
-          <h2 id="problem-title">Problem Description</h2>
-          <p>Robots can learn and practice tasks in simulation before attempting them on real hardware. For cloth folding, this depends on a simulator that captures how fabric stretches, bends, and makes contact with itself and the table. Matching a real cloth is difficult because its starting shape, material properties, and contact with the gripper may be uncertain.</p>
-          <p>Using smaller time steps can improve a simulation but also makes it slower. A learned model might approximate some of that detail at a lower cost, though its errors can accumulate over time. We will test this on a single cloth folding task by comparing a physics solver, a learned predictor, and a physics solver with a learned correction.</p>
+        <section aria-labelledby="problem-title">
+          <h2 id="problem-title">Problem and Approach</h2>
+          <p>A useful robot simulator must capture cloth motion without making training prohibitively slow. Small time steps improve numerical behavior but increase computation. Learned models offer another way to predict motion, although their errors can accumulate and their inference cost can exceed the cost of a simple physics solver.</p>
+          <p>Our original proposal considered a broad comparison of physics and learning. The current solver study focuses on two questions: whether a learned residual improves a calibrated spring model, and how much GPU throughput each method achieves. The current benchmark uses prescribed vertex grasps without simulated robot arms. It includes table contact but omits cloth self contact. Real-to-sim transfer from observed cloth is a longer-term goal. The results here use synthetic simulation data.</p>
         </section>
-
-        <section id="goals" aria-labelledby="goals-title">
-          <h2 id="goals-title">Goals and Deliverables</h2>
-          <p>We will test whether a small learned correction helps a faster cloth simulation match a reference simulation that uses smaller time steps. The three models will use the same mesh and grasp motions. The work draws on the course topics of mesh geometry, physical simulation, numerical integration, collisions, and shading.</p>
-
-          <h3>1. What we plan to deliver</h3>
-          <p><strong>Cloth representation and physics baseline.</strong> We will model a square cloth as a triangulated grid with structural, shear, and bending springs. The scene will include gravity, damping, a tabletop, and prescribed grasp points. We will use Verlet integration with adjustable substeps, stretch constraints, and spatial hashing to approximate contact between parts of the cloth. We will start with a 25 × 25 vertex grid and try a 50 × 50 grid if the first version is stable. These choices build on <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw4/part1/">masses and springs</a>, <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw4/part2/">numerical integration</a>, and <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw4/part4/">self collisions</a> from the course.</p>
-          <p><strong>Three comparable models.</strong> We will implement a physics solver, a learned dynamics predictor, and a hybrid solver. The learned model will use a small graph network over cloth vertices and edges to predict velocity changes from local geometry, velocity, material parameters, and grasp motion. The hybrid will use the same type of network to predict a residual velocity correction after a physics step. All three models will use the same mesh, grasp trajectories, and final corrections for stretch and contact. The learned predictor will replace the dynamics update while retaining these geometric constraints. We will evaluate complete motion sequences, with each prediction used as input to the next step.</p>
-          <p><strong>Controlled scenes and reference data.</strong> We will test cloth hanging from two corners, a tabletop fold made by lifting and moving two corners, and variations of that fold with grasp speeds and offsets excluded from training. Each folding sequence will last approximately three seconds, including grasp release and a settling interval. We will generate reference trajectories with the same physical model and smaller time steps. Halving the reference time step should produce little change in the result. Agreement with this numerical reference will measure simulation error. Testing accuracy on real cloth will require separate data. Our initial dataset target is 100 trajectories split into 60 training, 20 validation, and 20 test trajectories, with entire trajectories kept separate and test conditions fixed before model tuning.</p>
-          <p><strong>Graphics demo and images.</strong> Our demo recording will show the reference simulation and all three models at synchronized times. Include shaded views with the same camera and lighting, wireframe views showing deformation, and heat maps of vertex error with a shared scale. Capture the initial state, first layer contact, and settled fold. A separate replay viewer will let us pause, restart, choose a model, and switch between shaded, wireframe, and error views. Shading will make fold geometry visible, following the course’s <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw4/part5/">shader topics</a>.</p>
-
-          <p><strong>Quality and performance measurements.</strong> We will measure the following on trajectories excluded from training:</p>
+        <section aria-labelledby="methods-title">
+          <h2 id="methods-title">Cloth Solvers</h2>
+          <p>The shared task starts with a 40 cm square cloth lying on a table. Two corners remain anchored while the opposite corners lift, cross the sheet, lower, and release. All methods use the same mesh, prescribed grasps, and control interval of 1/60 second.</p>
           <ul>
-            <li><strong>Motion error:</strong> root mean square distance between corresponding predicted and reference vertices at each frame, normalized by cloth side length. Plot error over time and report the mean and error at the final frame.</li>
-            <li><strong>Fold accuracy:</strong> mean distance between corresponding points on the folded edge and its target edge after grasp release and settling, normalized by cloth side length. This avoids evaluating only the positions imposed by the grasp controller.</li>
-            <li><strong>Physical plausibility:</strong> maximum relative stretch along structural edges, maximum tabletop penetration depth, and fraction of vertex pairs closer than the minimum separation set by cloth thickness, excluding mesh neighbors. The last measure estimates contact errors but may miss intersections between triangles.</li>
-            <li><strong>Cost and stability:</strong> elapsed seconds per simulated second, excluding rendering and file output, on the same hardware. We will state which computations run on the CPU or GPU. Timing will include all solver substeps, network inference, and contact handling. We will report training time separately and repeat timing runs to measure variation. We will also report how often motion sequences produce invalid numerical values or excessive stretch. We will set the stretch failure threshold using validation data before testing.</li>
+            <li><strong>Mass and spring model.</strong> Semi implicit Euler integration with stretch, shear, and bending springs connecting vertices two edges apart.</li>
+            <li><strong>XPBD.</strong> Compliant distance constraints solved with sequential sweeps over groups of disjoint edges.</li>
+            <li><strong>PGRD.</strong> A calibrated spring step followed by a learned velocity correction at each free vertex. Held vertices receive no correction.</li>
           </ul>
-          <p><strong>Experiments and success criteria.</strong> We will compare three stable substep settings and plot error against runtime. Running the hybrid with its learned correction disabled will show what the correction contributes. We will also vary bending stiffness and grasp speed separately to see where the models stop working well. Our initial target is at least 10% lower mean motion error than the physics solver, with no more than 10% additional runtime and no increase in contact violations. A successful project will include a reproducible comparison of the three models, the test with the correction disabled, visual results, and an explanation of what worked and what failed. If the learned models are unstable, we will report their errors for individual prediction steps and show where the full sequences fail.</p>
-          <p><strong>Why this scope is feasible.</strong> Using one cloth topology, prescribed grasps, and generated training data gives us a manageable starting point. Sharing the contact code also reduces implementation work. The project adds a learned correction and evaluates its effect on motion error, runtime, and physical behavior. We will discuss MPM and FEM in the literature review, with an additional solver as a stretch goal.</p>
-          <p><strong>Questions we will answer.</strong> Does a residual correction reduce accumulated motion error at a fixed compute budget? Does it preserve stretch and contact behavior? How does its benefit change with the number of integration substeps, stiffness, and grasp speed, and where does a learned predictor become unstable?</p>
+          <h3>Our residual model</h3>
+          <p>Following the PGRD approach, we first fit physical parameters and then train the correction. Our adaptation uses attention over neighboring mesh vertices in place of Point Transformer V3, a smaller decoder, and a temporal transformer with two layers and four frames of history. A search over nine parameter combinations fits spring stiffness and table friction.</p>
+          <p>Training uses windows of five steps and feeds predictions back into the solver. Gradients pass through the residual network and its history while the spring step remains frozen. After applying the residual, we project the displacement against the table and update velocity consistently. This is our adaptation for a fixed tabletop mesh, not a reproduction of the original paper’s flag experiment.</p>
+          <h3>GPU implementation</h3>
+          <p>We implemented portable PyTorch solvers and fused Metal physics kernels. Metal assigns one threadgroup to each cloth and runs all physics substeps in one dispatch per control step. PGRD uses the fused spring step, but its residual network still runs through PyTorch. The repository also includes trajectory export, comparison rendering, and tests for solver agreement and data split separation.</p>
+        </section>
+        <section aria-labelledby="videos-title">
+          <h2 id="videos-title">Simulation Videos</h2>
+          <figure>
+            <h3>Solver comparison</h3>
+            <video controls playsinline preload="none" poster="assets/videos/solvers_64x64.jpg" width="1680" height="390" aria-label="Solver comparison">
+              <source src="assets/videos/solvers_64x64.mp4" type="video/mp4">
+              <a href="assets/videos/solvers_64x64.mp4">Watch solver comparison</a>
+            </video>
+            <img class="print-video" src="assets/videos/solvers_64x64.jpg" alt="Still frame from solver comparison" width="1680" height="390">
+            <figcaption>The XPBD teacher, spring solver, XPBD baseline, and PGRD shown together on a 64 × 64 mesh. The PGRD label identifies an 8 × 8 training checkpoint applied here with 64 spring substeps. This visualization uses different settings from the 8 × 8 measurements reported below. <a href="assets/videos/solvers_64x64.mp4">Open video</a> · <a href="https://github.com/charlesxu0124/284A-final-project/blob/main/videos/solvers_64x64.mp4">Repository source</a></figcaption>
+          </figure>
+          <figure>
+            <h3>PGRD test folds</h3>
+            <video controls playsinline preload="none" poster="assets/videos/pgrd_test_folds.jpg" width="1680" height="750" aria-label="PGRD test folds">
+              <source src="assets/videos/pgrd_test_folds.mp4" type="video/mp4">
+              <a href="assets/videos/pgrd_test_folds.mp4">Watch pgrd test folds</a>
+            </video>
+            <img class="print-video" src="assets/videos/pgrd_test_folds.jpg" alt="Still frame from pgrd test folds" width="1680" height="750">
+            <figcaption>Eight test folds predicted by PGRD, shown together to compare motion across different grasp trajectories. <a href="assets/videos/pgrd_test_folds.mp4">Open video</a> · <a href="https://github.com/charlesxu0124/284A-final-project/blob/main/videos/pgrd_test_folds.mp4">Repository source</a></figcaption>
+          </figure>
+          <figure>
+            <h3>Cloth resolution</h3>
+            <video controls playsinline preload="none" poster="assets/videos/xpbd_resolutions.jpg" width="1260" height="390" aria-label="Cloth resolution">
+              <source src="assets/videos/xpbd_resolutions.mp4" type="video/mp4">
+              <a href="assets/videos/xpbd_resolutions.mp4">Watch cloth resolution</a>
+            </video>
+            <img class="print-video" src="assets/videos/xpbd_resolutions.jpg" alt="Still frame from cloth resolution" width="1260" height="390">
+            <figcaption>XPBD at 8 × 8, 25 × 25, and 64 × 64 vertices. The recordings show how the visible fold changes with mesh resolution. <a href="assets/videos/xpbd_resolutions.mp4">Open video</a> · <a href="https://github.com/charlesxu0124/284A-final-project/blob/main/videos/xpbd_resolutions.mp4">Repository source</a></figcaption>
+          </figure>
 
-          <h3>2. What we hope to deliver</h3>
+        </section>
+        <section aria-labelledby="robot-title">
+          <h2 id="robot-title">Robot Cloth Manipulation and World Model</h2>
+          <p>Our second milestone experiment uses two simulated robot arms to manipulate MuJoCo flex cloth. The pipeline renders each episode from four cameras and uses the <a href="https://github.com/jwang771/3d-world-simulator">3D World Simulator</a> to learn the scene dynamics. An autoencoder maps the views to a voxel latent representation that decodes to Gaussian scene representations. A dynamics model predicts the next latent from recent states and robot actions.</p>
+          <p>The demonstration compares an open-loop prediction, a complete reconstruction, and the simulator reference. The model captures broad cloth configuration and robot motion, but artifacts remain around the arms and scene geometry. This is a qualitative result. We have not yet measured its accuracy and throughput under the same conditions as the cloth solver benchmark.</p>
+          <figure>
+            <h3>Robot cloth holding</h3>
+            <video controls playsinline preload="none" poster="assets/videos/mujoco_yam_hold_ep90.jpg" width="1920" height="480" aria-label="Simulated robot cloth holding and world model comparison">
+              <source src="assets/videos/mujoco_yam_hold_ep90.mp4" type="video/mp4">
+              <a href="assets/videos/mujoco_yam_hold_ep90.mp4">Watch robot cloth holding</a>
+            </video>
+            <img class="print-video" src="assets/videos/mujoco_yam_hold_ep90.jpg" alt="World model prediction, complete reconstruction, and MuJoCo simulation of two robot arms holding cloth" width="1920" height="480">
+            <figcaption>Two simulated YAM arms hold and move a cloth in test episode 90. From left to right: the world model prediction without new observations, the complete scene reconstruction, and the MuJoCo simulator reference. This fourteen second recording comes from the separate robot world model experiment. It shows cloth holding rather than a complete fold. <a href="assets/videos/mujoco_yam_hold_ep90.mp4">Open video</a> · <a href="https://github.com/charlesxu0124/284A-final-project/blob/main/videos/mujoco_yam_hold_ep90.mp4">Repository source</a></figcaption>
+          </figure>
+          <p>This experiment uses a different cloth representation from the spring and XPBD solvers. It shows progress on robot scene prediction, while contact handling, completed folding, and comparisons at matched accuracy remain open questions.</p>
+        </section>
+        <section aria-labelledby="accuracy-title">
+          <h2 id="accuracy-title">Motion Accuracy</h2>
+          <p>The reported experiment uses an 8 × 8 mesh and 120 control steps. Seed 7 produces separate sets of 12 training, 4 validation, and 8 test trajectories with varied lift height and timing. The reference is a CPU XPBD teacher using four substeps and twelve sweeps per substep. Calibration uses training folds, and checkpoint selection uses full validation sequences. The selected demo checkpoint is update 125 of 200.</p>
+          <table>
+            <caption>Error against the XPBD teacher on eight test trajectories</caption>
+            <thead><tr><th scope="col">Method</th><th scope="col">Motion RMSE</th><th scope="col">Final frame RMSE</th></tr></thead>
+            <tbody><tr><th scope="row">Calibrated spring</th><td>1.95 mm</td><td>2.90 mm</td></tr><tr><th scope="row">PGRD</th><td>1.76 mm</td><td>3.61 mm</td></tr></tbody>
+          </table>
+          <p>The residual lowers error over the full sequence by about 10%, but raises final frame error by about 24%. This matters when a robot’s reward depends on the settled fold. Both metrics exclude vertices held during the measured frame.</p>
+          <p>An additional experiment with eight spring substeps produced 1.76 mm motion error and 3.37 mm final frame error for PGRD, compared with 1.96 mm and 3.01 mm for its calibrated spring control. Both the eight and twelve substep hybrids achieved roughly 29,000 environment steps per second with fused Metal at batch 64.</p>
+          <p><strong>Limitations.</strong> These errors measure agreement with a synthetic teacher, not real cloth. The solver scene omits cloth thickness and self contact. Layers can appear aligned while intersecting, so the current metrics do not establish physically valid folding.</p>
+          <p><a href="https://github.com/charlesxu0124/284A-final-project/blob/main/artifacts/training.json">Training results</a> · <a href="https://github.com/charlesxu0124/284A-final-project/blob/main/artifacts/training-8substeps.json">Eight substep results</a></p>
+        </section>
+        <section aria-labelledby="performance-title">
+          <h2 id="performance-title">Simulation Performance</h2>
+          <p>The following measurements were taken on an Apple M5 Pro with 64 vertices per cloth. CPU measurements use one PyTorch thread. Spring and PGRD use twelve substeps. The timed XPBD baseline uses two substeps and four sweeps, fewer than the reference teacher.</p>
+          <table>
+            <caption>Median latency for one cloth, in milliseconds per control step</caption>
+            <thead><tr><th scope="col">Solver</th><th scope="col">CPU</th><th scope="col">Fused Metal</th></tr></thead>
+            <tbody><tr><th scope="row">Spring</th><td>0.52</td><td>0.20</td></tr><tr><th scope="row">XPBD</th><td>1.06</td><td>0.21</td></tr><tr><th scope="row">PGRD</th><td>0.84</td><td>0.92</td></tr></tbody>
+          </table>
+          <table>
+            <caption>Batch 64 throughput, in environment steps per second</caption>
+            <thead><tr><th scope="col">Solver</th><th scope="col">CPU</th><th scope="col">PyTorch MPS</th><th scope="col">Fused Metal</th></tr></thead>
+            <tbody><tr><th scope="row">Spring</th><td>13,600</td><td>33,900</td><td>1,390,000</td></tr><tr><th scope="row">XPBD</th><td>18,400</td><td>11,200</td><td>1,190,000</td></tr><tr><th scope="row">PGRD</th><td>4,330</td><td>15,900</td><td>28,700</td></tr></tbody>
+          </table>
+          <p>Fusion improves PGRD throughput by about 1.8 times over portable PyTorch MPS and 6.6 times over one CPU thread. The fused classical solvers are still much faster on this scene. Reducing spring substeps has little effect on hybrid throughput once physics is fused. These results do not yet show that learning improves speed at matched accuracy.</p>
+          <p>Latency synchronizes after every control step. Throughput synchronizes after blocks of sixteen steps with states and actions kept on the device. Timing includes cloth dynamics, prescribed grasps, and table contact. It excludes warmup, recording, transfers for metrics, file output, rendering, policy inference, and robot dynamics. These are measurements from one machine.</p>
+          <p><a href="https://github.com/charlesxu0124/284A-final-project/blob/main/artifacts/profile-m5-pro.json">Raw performance profile</a> · <a href="https://github.com/charlesxu0124/284A-final-project/tree/main/videos">Simulation recordings</a></p>
+        </section>
+        <section aria-labelledby="next-title">
+          <h2 id="next-title">Remaining Work</h2>
           <ul>
-            <li><strong>Broader simulation tests.</strong> Evaluate additional cloth resolutions and material parameters, or adapt an existing FEM or MPM implementation for one matched scene. Clearly separate errors caused by time stepping from differences in the underlying material model.</li>
-            <li><strong>Validation on real data.</strong> Use the cloth manipulation benchmark below to compare observed and simulated surfaces after scene alignment. Report symmetric surface distance when vertex correspondences are unavailable, and document differences in cloth properties and grasp trajectories.</li>
-            <li><strong>Robot transfer.</strong> If lab access and time permit, align a simulated scene to a real robot setup, train a folding policy using imitation learning or reinforcement learning, and compare final edge alignment error and fold success over repeated trials. Fix the success tolerance before testing and report the number of trials. This is the final stretch goal after the simulation study is complete.</li>
+            <li>Use a teacher with more complete contact handling and measure self intersections, error over different prediction horizons, and settled fold quality.</li>
+            <li>Compare methods at matched error and contact quality. Add a Newton VBD physics baseline and a learned dynamics control trained on the same trajectories.</li>
+            <li>Verify the portable CUDA implementation on NVIDIA hardware and run the original PGRD flag evaluation on Linux/CUDA.</li>
+            <li>Collect more measurements across solver settings and hardware to understand which parts of the computation limit speed. Evaluate the learned world model and investigate robot interaction in the classical cloth implementations.</li>
+            <li>Add individual contribution statements, update the paper as experiments progress, and prepare the final video and presentation.</li>
           </ul>
+          <p>Real cloth validation and policy transfer remain future work. The current results come from simulation.</p>
         </section>
-
-        <section id="schedule" aria-labelledby="schedule-title">
-          <h2 id="schedule-title">Schedule</h2>
-          <p>Four weeks from proposal to final presentation.</p>
-          <ol class="schedule">
-            <li>
-              <div class="week">Week 1</div>
-              <div><h3>Implement baselines</h3>
-                <p>Implement the 25 × 25 cloth model with masses and springs, Verlet stepping, prescribed grasps, tabletop contact, and approximate contact between parts of the cloth. Validate the hanging and half fold scenes. Confirm hardware, check whether the reference converges as the time step decreases, and freeze the trajectory split and metric definitions.</p>
-                <p class="milestone"><strong>Milestone:</strong> A stable physics baseline, two scene recordings, and an agreed plan for generating reference data.</p>
-              </div>
-            </li>
-            <li>
-              <div class="week">Week 2</div>
-              <div><h3>Study baseline tradeoffs</h3>
-                <p>Generate the planned trajectory dataset and run the physics substep sweep. Train the learned dynamics baseline and record errors over full motion sequences. Build the synchronized replay and error heat maps. Prepare the milestone paper, a video lasting one minute, and slides.</p>
-                <p class="milestone"><strong>Milestone:</strong> Physics and learned model comparison, first error/runtime plots, and milestone materials.</p>
-              </div>
-            </li>
-            <li>
-              <div class="week">Week 3</div>
-              <div><h3>Develop the hybrid method</h3>
-                <p>Train the residual velocity model. Run the hybrid with and without its correction. Test grasp speeds and offsets excluded from training, vary stiffness, and measure contact and stretch violations. Attempt the 50 × 50 scaling test only after the core comparison works.</p>
-                <p class="milestone"><strong>Milestone:</strong> Results for all three models, a test with the correction disabled, and documented stability or generalization failures.</p>
-              </div>
-            </li>
-            <li>
-              <div class="week">Week 4</div>
-              <div><h3>Finish results and presentation</h3>
-                <p>Freeze the test evaluation, repeat timing measurements, and finish synchronized clips, heat maps, and error/runtime plots. Write the CS284A paper and prepare the final video and presentation. Attempt validation on real data or robot transfer only after the core deliverables are complete.</p>
-                <p class="milestone"><strong>Milestone:</strong> Reproducible results and configurations, replay demo, final paper, video, and presentation.</p>
-              </div>
-            </li>
-          </ol>
-        </section>
-
-        <section id="resources" aria-labelledby="resources-title">
-          <h2 id="resources-title">Resources</h2>
-          <h3>Papers and data</h3>
-          <ol class="references">
-            <li>David Baraff and Andrew Witkin. <a href="https://doi.org/10.1145/280814.280821">Large Steps in Cloth Simulation</a>. SIGGRAPH, 1998. <span>Foundational cloth simulation methods.</span></li>
-            <li>Alexey Stomakhin et al. <a href="https://doi.org/10.1145/2461912.2461948">A Material Point Method for Snow Simulation</a>. ACM Transactions on Graphics, 2013. <span>Background on MPM. Applying this method to cloth would require changes to the material model.</span></li>
-            <li>Tobias Pfaff et al. <a href="https://arxiv.org/abs/2010.03409">Learning Mesh-Based Simulation with Graph Networks</a>. ICLR, 2021. <span>Reference for learned dynamics on cloth meshes. Our experiment will test a learned correction to a physics solver.</span></li>
-            <li>Jan Matas, Stephen James, and Andrew J. Davison. <a href="https://proceedings.mlr.press/v87/matas18a.html">Sim-to-Real Reinforcement Learning for Deformable Object Manipulation</a>. CoRL, 2018. <span>Robot cloth manipulation and policy transfer.</span></li>
-            <li>David Blanco-Mulero et al. <a href="https://arxiv.org/abs/2310.09543">Benchmarking the Sim-to-Real Gap in Cloth Manipulation</a>. <span>The paper and its supplementary dataset will inform evaluation of the simulation gap, runtime, and stability.</span></li>
-          </ol>
-          <h3>Course references</h3>
-          <p>The <a href="https://cs184.eecs.berkeley.edu/fa26/">CS184/284A course</a> provides the mesh and simulation background. <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw4/">Homework 4</a> provides background for the cloth model. Our project will add the learned correction, model comparison, and evaluation code. We will follow the <a href="https://cs184.eecs.berkeley.edu/fa26/project/">CS284A project requirements</a> for milestone and final submissions.</p>
-          <h3>Computing platform, hardware, software, and starting code</h3>
-          <p><strong>Hardware and lab access.</strong> Our team has access to computers in Cory Hall and personal computers equipped with NVIDIA GPUs. We will use these machines for development, simulation, dataset generation, and model training. Team members also have access to research labs and robotic manipulators through their lab affiliations. These resources will support the optional experiments with real cloth after the simulation comparison is complete.</p>
-          <p><strong>Software.</strong> We plan to use Python with <a href="https://docs.pytorch.org/docs/stable/index.html">PyTorch</a> for the cloth simulation and learned models, with CUDA acceleration on compatible NVIDIA systems. We will use <a href="https://numpy.org/doc/stable/">NumPy</a> for data processing, <a href="https://matplotlib.org/stable/">Matplotlib</a> for evaluation plots, and <a href="https://docs.pyvista.org/">PyVista</a> for mesh visualization and replay. We will train the models on our generated trajectories. Git and GitHub will track code, configurations, and contributions.</p>
-          <p><strong>Starting point and implementation.</strong> We plan to write the cloth solver, learned correction, and evaluation code for this project. The course cloth assignment will serve as a reference for the physics model, and the <a href="https://arxiv.org/abs/2010.03409">MeshGraphNets paper</a> and its <a href="https://github.com/google-deepmind/deepmind-research/tree/master/meshgraphnets">reference implementation</a> will guide the graph network design. Any code we adapt will be cited, with our changes identified separately.</p>
-          <p><strong>Experimental setup.</strong> We will record the operating system, CPU, GPU, memory, and software versions used for the experiments. Timing comparisons will run on the same machine with CPU and GPU usage reported. Our team will manage installation, compatibility, and troubleshooting on the chosen platforms. We will keep the initial models small enough to allow repeated training and evaluation within the project schedule.</p>
+        <section aria-labelledby="resources-title">
+          <h2 id="resources-title">Implementation and References</h2>
+          <p>The solver code uses Python, NumPy, PyTorch, and custom Metal kernels. Rendering uses Matplotlib and FFmpeg. The measurements presented here use an Apple M5 Pro. The team also has access to Cory Hall computers, personal NVIDIA systems, and research lab manipulators for further experiments.</p>
+          <p>Our implementation includes the tabletop PGRD adaptation, fused physics, and evaluation scripts. PGRD is an existing method that we build on. The repository also contains a separate MuJoCo and world model pipeline, reported above as a separate milestone experiment. Its outputs are not part of the PGRD accuracy and timing tables. Individual contributions will be documented in the completed report.</p>
+          <ul class="references">
+            <li><a href="https://doi.org/10.1145/2994258.2994272">XPBD: Position-Based Simulation of Compliant Constrained Dynamics</a>, the constraint formulation used by our physics solver.</li>
+            <li><a href="https://github.com/jwang771/3d-world-simulator">3D World Simulator</a>, the learned model used in our robot experiment.</li>
+            <li><a href="https://newton-physics.github.io/newton/stable/concepts/simulation_tuning_vbd.html">Newton VBD documentation</a>, a reference for the planned physics baseline.</li>
+            <li><a href="https://arxiv.org/html/2607.13451v1">PGRD paper and appendix</a> and <a href="https://github.com/shivanshpatel35/pgrd">authors’ implementation</a>.</li>
+            <li><a href="https://arxiv.org/abs/2010.03409">Learning Mesh-Based Simulation with Graph Networks</a>, a reference for the planned learned control.</li>
+            <li><a href="https://ipc-sim.github.io/C-IPC/">Codimensional Incremental Potential Contact</a> and <a href="https://arxiv.org/abs/2310.09543">Benchmarking the Sim-to-Real Gap in Cloth Manipulation</a>, resources for extending contact and real cloth evaluation.</li>
+          </ul>
+          <p>Experiment details and reproduction commands are maintained in the <a href="https://github.com/charlesxu0124/284A-final-project">project repository</a> and its <a href="https://github.com/charlesxu0124/284A-final-project/blob/main/HANDOFF.md">experiment notes</a>.</p>
         </section>
       </main>
     </div>

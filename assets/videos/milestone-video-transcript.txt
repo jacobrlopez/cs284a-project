@@ -1,0 +1,17 @@
+Automatic transcript of cs284-milestone-video.mov
+Duration: 87.4 seconds. The first sentence starts mid-phrase. Automatic timestamps and wording may be approximate. Technical spellings have been normalized.
+
+[000.0–005.2] stages of our project, we wanted to investigate the trade-offs between learning-based and traditional
+[005.2–011.8] cloth simulation, especially for robotic manipulation. We're specifically interested in things like
+[011.8–016.9] real-to-sim transfer from real data, and also the speed at which the cloth can be simulated.
+[018.5–024.5] On the left, we have a method that we implemented called extended position-based dynamics.
+[025.3–032.5] In the second column, we have a simple mass spring model, and here you can see some visual results.
+[033.7–040.0] On the right is a method called physics-guided residual dynamics, which is a learning-based method,
+[040.0–044.0] and it is distilled from the extended position-based dynamics teacher.
+[044.0–052.9] We also investigated some more complex simulation, so here on the right is a
+[052.9–061.8] MuJoCo-based simulator, and on the left and in the middle column are open-loop rollouts from
+[061.8–067.5] a method called 3D World Simulator, and here you can see that there are some artifacts,
+[067.5–073.0] but it is doing a pretty good job of simulating, and for the next steps, we want to investigate
+[073.0–079.7] speed trade-offs between the neural-based methods and the traditional simulation-based methods,
+[079.7–083.9] and also our traditional simulation-based methods that we implemented don't have collisions or
+[083.9–087.4] robot arms, so we will continue to investigate that.
